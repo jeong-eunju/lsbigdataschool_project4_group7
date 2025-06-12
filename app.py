@@ -25,7 +25,7 @@ WWW_DIR  = BASE_DIR / "www"
 
 # ====== [1] 한글 폰트 설정 ======
 if platform.system() == 'Windows':
-    matplotlib.rc('font', family='Malgun Gothic')
+    matplotlib.rc('font', family='맑은 고딕')
 elif platform.system() == 'Darwin':
     matplotlib.rc('font', family='AppleGothic')
 else:
@@ -154,13 +154,31 @@ pop_df = pd.DataFrame({
 
 # 22개 지역별 고유 색상 배정
 REGION_COLORS = {
-    "포항시": "#e6194b", "경주시": "#46f0f0", "김천시": "#ffe119", "안동시": "#4363d8",
-    "구미시": "#f58231", "영주시": "#911eb4", "영천시": "#3cb44b", "상주시": "#f032e6",
-    "문경시": "#bcf60c", "경산시": "#fabebe", "의성군": "#008080", "청송군": "#e6beff",
-    "영양군": "#9a6324", "영덕군": "#000000", "청도군": "#800000", "고령군": "#aaffc3",
-    "성주군": "#808000", "칠곡군": "#ffd8b1", "예천군": "#000075", "봉화군": "#808080",
-    "울진군": "#4682B4", "울릉군": "#f7f2bd"
+    "포항시": "#d14747",
+    "경주시": "#d16c47",
+    "김천시": "#d19247",
+    "안동시": "#d1b847",
+    "구미시": "#c4d147",
+    "영주시": "#9fd147",
+    "영천시": "#79d147",
+    "상주시": "#53d147",
+    "문경시": "#47d160",
+    "경산시": "#47d185",
+    "의성군": "#47d1ab",
+    "청송군": "#47d1d1",
+    "영양군": "#47abd1",
+    "영덕군": "#4785d1",
+    "청도군": "#4760d1",
+    "고령군": "#5347d1",
+    "성주군": "#7947d1",
+    "칠곡군": "#9f47d1",
+    "예천군": "#c447d1",
+    "봉화군": "#d147b8",
+    "울진군": "#d14792",
+    "울릉군": "#d1476c",
 }
+
+
 
 # ====== [6] 영천시 데이터 로딩 (수정된 버전) ======
 try:
@@ -654,8 +672,13 @@ def create_yeongcheon_map(selected_marker=None, map_type="normal", locations=Non
             folium.Marker(
                 location=[row['위도'], row['경도']],
                 tooltip=row['시설명'],
-                icon=folium.Icon(color=color)
+                icon=folium.Icon(
+                    icon='paw',    # Font-Awesome paw 아이콘
+                    prefix='fa',   # Font-Awesome 사용을 알리는 접두사
+                    color=color    # 기존 색상(red/blue) 유지
+                )
             ).add_to(m)
+
 
     # 모든 저수지 점 표시
     for _, row in df_yeongcheon.iterrows():
@@ -800,21 +823,24 @@ def analyze_population_facility_ratio(facility_file_path: str, population_file_p
     
     return optimize_dataframe_memory(df_merge)
 
-# ====== [9] 레이더 차트 함수 ======
+
+# ====== [9] 레이더 차트 함수 (배경색과 격자 수정 + hovertext/hovertemplate) ======
 def plot_radar_chart(park_fp, acc_fp, facility_fp, pop_fp, crime_fp, pollution_fp, selected_regions=None):
-    """종합 레이더 차트"""
+    """종합 레이더 차트 (배경색과 격자 수정 + hovertext/hovertemplate 적용)"""
     try:
-        # 데이터 준비 및 분석
-        df_park = pd.read_excel(park_fp).iloc[3:,[1,3]]
-        df_park.columns = ['시군','면적']
-        df_park['면적'] = pd.to_numeric(df_park['면적'],errors='coerce')
+        # ───────────────────────────────────────────────────────────────────────────
+        # 1) 공원면적 데이터
+        df_park = pd.read_excel(park_fp).iloc[3:, [1, 3]]
+        df_park.columns = ['시군', '면적']
+        df_park['면적'] = pd.to_numeric(df_park['면적'], errors='coerce')
         df_park = df_park.merge(pop_df, on='시군')
         df_park['per_person'] = df_park['면적'] / df_park['인구수']
         df_park['park_norm'] = (df_park['per_person'] / df_park['per_person'].max()).astype(np.float32)
 
-        # 교통사고 분석
+        # ───────────────────────────────────────────────────────────────────────────
+        # 2) 교통사고 분석
         df_acc = pd.read_excel(acc_fp)
-        df_acc = df_acc[df_acc['구분'] == '사고'].drop(columns=['연도','구분'])
+        df_acc = df_acc[df_acc['구분'] == '사고'].drop(columns=['연도', '구분'])
         acc_mean = df_acc.mean()
         mapping_acc = {
             '포항북부':'포항시','포항남부':'포항시','경주':'경주시','김천':'김천시','안동':'안동시','구미':'구미시',
@@ -833,7 +859,8 @@ def plot_radar_chart(park_fp, acc_fp, facility_fp, pop_fp, crime_fp, pollution_f
         df_acc2['acc_inv'] = 1 / (df_acc2['acc'] / df_acc2['인구수'])
         df_acc2['acc_norm'] = (df_acc2['acc_inv'] / df_acc2['acc_inv'].max()).astype(np.float32)
 
-        # 반려동물 시설 분석
+        # ───────────────────────────────────────────────────────────────────────────
+        # 3) 반려동물 시설 분석
         df_fac = pd.read_csv(facility_fp, encoding='cp949')
         df_fac = df_fac[df_fac['시도 명칭'] == '경상북도']
         df_fac['시군'] = df_fac['시군구 명칭'].str.extract(r'^(.*?[시군])')[0]
@@ -843,7 +870,8 @@ def plot_radar_chart(park_fp, acc_fp, facility_fp, pop_fp, crime_fp, pollution_f
         fac_df['per_person'] = fac_df['facility_count'] / fac_df['인구수']
         fac_df['fac_norm'] = (fac_df['per_person'] / fac_df['per_person'].max()).astype(np.float32)
 
-        # 범죄 분석
+        # ───────────────────────────────────────────────────────────────────────────
+        # 4) 범죄율 분석
         crime_df = pd.read_excel(crime_fp)
         cols = [c for c in crime_df.columns if c not in ['범죄대분류', '범죄중분류']]
         crime_tot = crime_df[cols].sum().reset_index()
@@ -854,7 +882,8 @@ def plot_radar_chart(park_fp, acc_fp, facility_fp, pop_fp, crime_fp, pollution_f
         crime_tot['crime_inv'] = 1 / (crime_tot['crime'] / crime_tot['인구수'])
         crime_tot['crime_norm'] = (crime_tot['crime_inv'] / crime_tot['crime_inv'].max()).astype(np.float32)
 
-        # 대기오염 분석
+        # ───────────────────────────────────────────────────────────────────────────
+        # 5) 대기오염 분석
         pollutants = {
             'PM2.5': '미세먼지_PM2.5__월별_도시별_대기오염도',
             'PM10': '미세먼지_PM10__월별_도시별_대기오염도',
@@ -873,7 +902,6 @@ def plot_radar_chart(park_fp, acc_fp, facility_fp, pop_fp, crime_fp, pollution_f
                 polls.append(avg)
             except:
                 pass
-        
         if polls:
             poll_df = pd.concat(polls, axis=1).reset_index().rename(columns={'구분(2)': '시군'})
             poll_df['시군'] = poll_df['시군'].astype(str).apply(lambda x: x + '시' if not x.endswith(('시', '군')) else x)
@@ -887,72 +915,106 @@ def plot_radar_chart(park_fp, acc_fp, facility_fp, pop_fp, crime_fp, pollution_f
         else:
             poll_df = pd.DataFrame({'시군': REGIONS, 'poll_norm': [0.5] * len(REGIONS)})
 
-        # 통합 및 시각화
+        # ───────────────────────────────────────────────────────────────────────────
+        # 6) 데이터 통합
         metrics = pd.DataFrame({'시군': REGIONS})
         metrics = metrics.merge(df_park[['시군', 'park_norm']], on='시군', how='left')
         metrics = metrics.merge(df_acc2[['시군', 'acc_norm']], on='시군', how='left')
         metrics = metrics.merge(fac_df[['시군', 'fac_norm']], on='시군', how='left')
         metrics = metrics.merge(crime_tot[['시군', 'crime_norm']], on='시군', how='left')
         metrics = metrics.merge(poll_df[['시군', 'poll_norm']], on='시군', how='left')
-        
-        # 결측값 처리
         metrics = metrics.fillna(0.5)
         metrics = optimize_dataframe_memory(metrics)
 
+        # ───────────────────────────────────────────────────────────────────────────
+        # 7) 레이더 차트 그리기
         categories = ['산책 환경', '반려동물 시설', '교통 안전', '치안', '대기 환경']
         theta = categories + [categories[0]]
-
         fig = go.Figure()
-        
+
         for _, row in metrics.iterrows():
             values = [
                 row['park_norm'], row['fac_norm'], row['acc_norm'],
                 row['crime_norm'], row['poll_norm']
             ] + [row['park_norm']]
-
-            is_selected = selected_regions and row['시군'] in selected_regions
-            region_color = REGION_COLORS.get(row['시군'], '#808080')
             
-            if is_selected:
-                def hex_to_rgb(hex_color):
-                    hex_color = hex_color.lstrip('#')
-                    return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
-                
-                rgb = hex_to_rgb(region_color)
-                fill_color = f'rgba({rgb[0]}, {rgb[1]}, {rgb[2]}, 0.2)'
-                
+            # 시군명을 point 하나하나에 반복해서 담아 줍니다
+            cd = [row['시군']] * len(values)
+
+            is_sel = selected_regions and row['시군'] in selected_regions
+            col = REGION_COLORS.get(row['시군'], '#808080')
+            width = 3 if is_sel else 1
+            opacity = 1.0 if is_sel else 0.2
+            showleg = is_sel
+            if is_sel:
                 fig.add_trace(go.Scatterpolar(
-                    r=values, theta=theta, name=row['시군'],
-                    line=dict(width=3, color=region_color),
-                    opacity=1.0, fill='toself', fillcolor=fill_color
+                    r=values,
+                    theta=theta,
+                    name=row['시군'],
+                    customdata=cd,
+                    hovertemplate=(
+                        "지역: %{customdata}<br>"
+                        "지표: %{theta}<br>"
+                        "점수: %{r:.2f}<extra></extra>"
+                    ),
+                    line=dict(width=width, color=col),
+                    opacity=opacity,
+                    showlegend=True
                 ))
             else:
                 fig.add_trace(go.Scatterpolar(
-                    r=values, theta=theta, name=row['시군'],
-                    line=dict(width=1, color='lightgray'),
-                    opacity=0.2, showlegend=False
+                    r=values,
+                    theta=theta,
+                    name=row['시군'],
+                    hoverinfo='skip',      # ◀ 여기를 추가하면 툴팁이 뜨지 않습니다
+                    line=dict(width=width, color='lightgray'),
+                    opacity=opacity,
+                    showlegend=False
                 ))
 
+
+        # ───────────────────────────────────────────────────────────────────────────
+        # 8) 스타일 수정
         fig.update_layout(
             polar=dict(
-                radialaxis=dict(visible=True, range=[0, 1], side="clockwise", angle=90),
-                angularaxis=dict(rotation=90, direction="clockwise")
+                radialaxis=dict(
+                    visible=True,
+                    range=[0, 1.2],
+                    side="clockwise",
+                    angle=90,
+                    gridcolor='lightgray',
+                    showline=True,
+                    linecolor='lightgray',
+                    tick0=0,
+                    dtick=0.2,
+                    showticklabels=True
+                ),
+                angularaxis=dict(
+                    rotation=90,
+                    direction="clockwise",
+                    gridcolor='lightgray'
+                ),
+                bgcolor='white'
             ),
             showlegend=True,
             legend=dict(orientation='h', x=0.5, xanchor='center', y=-0.2),
-            width=520, height=500,
-            margin=dict(t=20, b=0, l=0, r=0)
+            width=520,
+            height=500,
+            margin=dict(t=20, b=0, l=0, r=0),
+            plot_bgcolor='white',
+            paper_bgcolor='white'
         )
 
-        # 메모리 정리
+        # ───────────────────────────────────────────────────────────────────────────
+        # 9) 메모리 정리 & 반환
         del df_park, df_acc, df_acc2, df_fac, fac_df, crime_df, crime_tot, poll_df, metrics
         gc.collect()
-
         return fig
-        
+
     except Exception as e:
         print(f"레이더 차트 생성 오류: {e}")
         return go.Figure()
+
 
 # ====== [10] 지도 생성 함수들 ======
 def create_gyeongbuk_map(selected_regions=None):
@@ -1010,7 +1072,7 @@ def create_gyeongbuk_map(selected_regions=None):
             location=[centroid.y, centroid.x],
             icon=folium.DivIcon(
                 html=f"""<div style="
-                    font-family: 'Noto Sans KR', sans-serif;
+                    font-family: '맑은 고딕', sans-serif;
                     font-size: {font_size};
                     font-weight: {font_weight};
                     color: {text_color};
@@ -1025,166 +1087,62 @@ def create_gyeongbuk_map(selected_regions=None):
     
     return m._repr_html_()
 
-def create_yeongcheon_map(selected_marker=None, map_type="normal", locations=None, selected_area=None):
-    """영천시 지도 생성"""
-    if df_yeongcheon.empty:
-        return "<div>지도 데이터를 불러올 수 없습니다.</div>"
-    
-    # 기본 중심점과 줌 레벨
-    center_lat, center_lng = 35.961380, 128.927778
-    zoom = 11
 
-    if locations is None:
-        locations = pd.DataFrame()
-
-    # 1. 읍면동 선택에 따른 지도 중심/줌 결정 (우선순위 높음)
-    if selected_area and selected_area != "전체" and not gdf_yeongcheon.empty:
-        area_gdf = gdf_yeongcheon[gdf_yeongcheon['ADM_NM'] == selected_area]
-        if not area_gdf.empty:
-            bounds = area_gdf.total_bounds
-            center_lat = (bounds[1] + bounds[3]) / 2
-            center_lng = (bounds[0] + bounds[2]) / 2
-            zoom = 13
-            
-    # 2. 저수지가 선택되었고 locations에 해당 저수지가 있을 때만 위치 변경
-    elif selected_marker and not locations.empty and selected_marker in locations['시설명'].values:
-        selected = locations[locations['시설명'] == selected_marker]
-        if not selected.empty:
-            center_lat, center_lng = selected.iloc[0]['위도'], selected.iloc[0]['경도']
-            zoom = 15
-
-    m = folium.Map(
-        location=[center_lat, center_lng], 
-        zoom_start=zoom, 
-        width="100%", 
-        height="100%",
-        max_zoom=18,
-        zoom_control=False,
-        prefer_canvas=True  # 캔버스 렌더링으로 메모리 절약
-    )
-    
-    if map_type == "satellite":
-        folium.TileLayer(
-            tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-            attr="ESRI", 
-            name="위성 지도", 
-            control=False,
-            max_zoom=18
-        ).add_to(m)
-    else:
-        folium.TileLayer(
-            "OpenStreetMap", 
-            name="일반 지도", 
-            control=False,
-            max_zoom=19
-        ).add_to(m)
-
-    # 현재 지도 상태 유지를 위한 JavaScript 추가
-    preserve_state_script = f"""
-    <script>
-    var selectedReservoir = "{selected_marker if selected_marker else ""}";
-    var isReservoirSelected = selectedReservoir !== "" && selectedReservoir !== "None";
-    
-    setTimeout(function() {{
-        var mapElement = document.querySelector('.folium-map');
-        if (mapElement) {{
-            var leafletMap = window[mapElement.id];
-            if (leafletMap) {{
-                if (!isReservoirSelected && sessionStorage.getItem('mapZoom') && sessionStorage.getItem('mapCenter')) {{
-                    var savedZoom = parseInt(sessionStorage.getItem('mapZoom'));
-                    var savedCenter = JSON.parse(sessionStorage.getItem('mapCenter'));
-                    leafletMap.setView([savedCenter.lat, savedCenter.lng], savedZoom);
-                }} else if (isReservoirSelected) {{
-                    setTimeout(function() {{
-                        var currentZoom = leafletMap.getZoom();
-                        var currentCenter = leafletMap.getCenter();
-                        sessionStorage.setItem('mapZoom', currentZoom);
-                        sessionStorage.setItem('mapCenter', JSON.stringify({{
-                            lat: currentCenter.lat,
-                            lng: currentCenter.lng
-                        }}));
-                    }}, 1000);
-                }}
-                
-                leafletMap.on('zoomend moveend', function() {{
-                    setTimeout(function() {{
-                        var currentZoom = leafletMap.getZoom();
-                        var currentCenter = leafletMap.getCenter();
-                        sessionStorage.setItem('mapZoom', currentZoom);
-                        sessionStorage.setItem('mapCenter', JSON.stringify({{
-                            lat: currentCenter.lat,
-                            lng: currentCenter.lng
-                        }}));
-                    }}, 100);
-                }});
-            }}
-        }}
-    }}, 500);
-    </script>
-    """
-
-    # 행정구역 경계
-    if not gdf_yeongcheon.empty:
-        folium.GeoJson(
-            gdf_yeongcheon,
-            name="영천시 읍면동 경계",
-            style_function=lambda x: {
-                'fillColor': 'transparent', 
-                'color': 'DarkGreen', 
-                'weight': 2,
-                'fillOpacity': 0,
-                'opacity': 0.7
-            },
-        ).add_to(m)
-
-    if not locations.empty:
-        for _, row in locations.iterrows():
-            color = 'red' if selected_marker == row['시설명'] else 'blue'
-            folium.Marker(
-                location=[row['위도'], row['경도']],
-                tooltip=row['시설명'],
-                icon=folium.Icon(color=color)
-            ).add_to(m)
-
-    # 모든 저수지 점 표시
-    for _, row in df_yeongcheon.iterrows():
-        if locations.empty or row['시설명'] not in locations['시설명'].values:
-            folium.CircleMarker(
-                location=[row['위도'], row['경도']],
-                radius=3, 
-                color='#1E90FF', 
-                fill=True, 
-                fill_color='#1E90FF', 
-                fill_opacity=0.6,
-                tooltip=row['시설명']
-            ).add_to(m)
-
-    # JavaScript 추가
-    m.get_root().html.add_child(folium.Element(preserve_state_script))
-
-    return m._repr_html_()
 
 def create_barplot(data):
     """영천시 적합도 바 차트"""
+    # 데이터 정렬
     df_sorted = data.sort_values(by='적합도점수', ascending=True)
+    
+    # Bar 차트 생성
     fig = px.bar(
         df_sorted,
-        x='적합도점수', y='시설명',
-        orientation='h', title=f'상위 {len(data)}개 저수지 적합도 점수',
-        height=300, width=320
+        x='적합도점수',
+        y='시설명',
+        orientation='h',
+        title=f'상위 {len(data)}개 저수지 개발 적합도 점수',
+        height=300,
+        width=320,
+        color_discrete_sequence=['#1e3a8a']
     )
+    
+    # 툴팁 포맷팅: 시설명(%{y}), 점수 소수점 둘째자리까지
+    fig.update_traces(
+        hovertemplate='<b>%{y}</b><br>점수: %{x:.2f}<extra></extra>'
+    )
+    
+    # 레이아웃 및 hoverlabel 스타일
     fig.update_layout(
-        xaxis=dict(range=[0, 1.2], showgrid=False,
-                  tickvals=[0, 0.5, 1.0], ticktext=['0', '0.5', '1']),
-        yaxis_title=None, 
+        xaxis=dict(
+            range=[0, 1.2],
+            showgrid=False,
+            tickvals=[0, 0.5, 1.0],
+            ticktext=['0', '0.5', '1']
+        ),
+        yaxis_title=None,
         margin=dict(l=0, r=10, t=30, b=0),
-        plot_bgcolor='rgba(0,0,0,0)', 
+        plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
-        font=dict(size=10)
+        font=dict(size=10),
+        hoverlabel=dict(
+            bgcolor='#EEEEEE',    # 툴팁 배경
+            font_color='#333333', # 글자색
+            bordercolor='#AAAAAA' # 테두리색
+        )
     )
-    return ui.HTML(fig.to_html(full_html=False, include_plotlyjs='embed', config={'displayModeBar': False}))
+    
+    # Shiny UI로 반환
+    return ui.HTML(
+        fig.to_html(
+            full_html=False,
+            include_plotlyjs='embed',
+            config={'displayModeBar': False}
+        )
+    )
 
-# ====== [11] CSS 스타일 ======
+
+
+# ====== [11] CSS 스타일 (헤더와 레이더 차트 간격 수정) ======
 custom_css = """
 /* ─ 배경 이미지 + 어두운 오버레이 ─ */
 .welcome-background {
@@ -1221,15 +1179,20 @@ custom_css = """
 /* ─ 제목/부제목 ─ */
 .welcome-title {
   font-size: 2.5rem;
-  color: #000;                /* 흰색에서 검정색으로 */
-  text-shadow: none;          /* 그림자 제거 */
+    font-weight: bold;
+  color: #000;                
+  text-shadow: none;          
+  margin-top: -100px;    
   margin-bottom: 0.5rem;
 }
 .welcome-subtitle {
   font-size: 1.25rem;
-  color: #000;                /* 흰색에서 검정색으로 */
+  font-weight: 500;
+  color: #000;                
+  margin-top: 10px;   
   margin-bottom: 2rem;
 }
+
 
 /* ─ 시작 버튼 ─ */
 .start-button {
@@ -1292,6 +1255,8 @@ custom_css = """
     color: #667eea;
     font-weight: bold;
 }
+
+
 
 /* 경상북도용 사이드바 */
 #gyeongbuk-sidebar {
@@ -1363,6 +1328,7 @@ custom_css = """
     transition: left 0.3s ease-in-out;
 }
 
+
 .sidebar-section {
     margin-bottom: 20px;
     border-bottom: 1px solid #eee;
@@ -1384,23 +1350,354 @@ custom_css = """
     color: #333;
 }
 
+
+/* ─────────────────────────────────
+   공통 사이드바 디자인
+───────────────────────────────── */
+#gyeongbuk-sidebar,
+#yeongcheon-sidebar {
+  position: fixed;
+  top: 60px;                            /* 헤더 바로 아래 */
+  left: 0;
+  width: 260px;                         /* 너비를 260px로 줄임 */
+  height: calc(100vh - 60px);
+  background: #fff;                     /* 깨끗한 흰색 배경 */
+  border-right: 1px solid #e0e0e0;      /* 부드러운 테두리 */
+  box-shadow: 2px 0 8px rgba(0,0,0,0.1); /* 조금 가벼운 그림자 */
+  border-top-right-radius: 8px;         /* 우측 모서리 둥글게 */
+  border-bottom-right-radius: 8px;
+  padding: 16px;                        /* 내부 여백 */
+  overflow-y: auto;
+  transition: transform 0.3s ease;
+  transform: translateX(0);             /* JS에서 translateX(-260px)로 닫고, 0으로 열립니다 */
+}
+
+/* ─────────────────────────────────
+   토글 버튼 디자인
+───────────────────────────────── */
+#gyeongbuk-toggle-button,
+#yeongcheon-toggle-button {
+  position: fixed;
+  top: calc(60px + 16px);              /* 헤더 높이 + 사이드바 패딩 */
+  left: 260px;                          /* 사이드바의 오른쪽 끝에 딱 붙여놓습니다 */
+  width: 32px;
+  height: 32px;
+  background-color: #1e88e5;            /* 포인트 블루 */
+  color: #fff;
+  border: none;
+  border-top-left-radius: 4px;          /* 버튼 왼쪽 모서리만 둥글게 */
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: left 0.3s ease, background-color 0.2s ease;
+  z-index: 1100;
+}
+#gyeongbuk-toggle-button:hover,
+#yeongcheon-toggle-button:hover {
+  background-color: #1565c0;           /* hover 땐 좀 더 진한 블루로 */
+}
+
+/* ─────────────────────────────────
+   토글 버튼: 오른쪽만 둥글게
+───────────────────────────────── */
+#gyeongbuk-toggle-button,
+#yeongcheon-toggle-button {
+  position: fixed;
+  top: calc(60px + 16px);
+  left: 260px;
+  width: 40px;
+  height: 60px;
+  background-color: #ffffff;
+  color: #333333;
+  border: none;
+  /* top-left, top-right, bottom-right, bottom-left */
+  border-radius: 0 20px 20px 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: left 0.3s ease, background-color 0.2s ease;
+  z-index: 900;
+}
+#gyeongbuk-toggle-button:hover,
+#yeongcheon-toggle-button:hover {
+  background-color: #f5f5f5;
+}
+
+
+
+
+/* 부록 페이지 스타일 */
+#appendix-content {
+    padding: 40px;
+    background-color: #f8f9fa;
+    min-height: calc(100vh - 60px);
+    max-width: 1200px;
+    margin: 0 auto;
+    font-family: '맑은 고딕', sans-serif;
+}
+
+.appendix-section {
+    background-color: white;
+    margin-bottom: 30px;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.appendix-section h2 {
+    color: #1e3a8a;
+    border-bottom: 3px solid #1e3a8a;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.appendix-section h3 {
+    color: #2563eb;
+    margin-top: 25px;
+    margin-bottom: 15px;
+}
+
+.appendix-section h4 {
+    color: #3b82f6;
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+.formula-box {
+    background-color: #f1f5f9;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 15px 0;
+    font-family: 'Courier New', monospace;
+    text-align: center;
+}
+
+.highlight-box {
+    background-color: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    padding: 15px;
+    margin: 15px 0;
+}
+
+.data-source {
+    background-color: #f0f9ff;
+    border-left: 4px solid #0ea5e9;
+    padding: 10px;
+    margin: 10px 0;
+    font-size: 0.9em;
+}
+
+.method-step {
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 15px;
+    margin: 10px 0;
+}
+
+
+
 :root {
   --bslib-sidebar-main-bg: #f3f3f3;
 }
 
 body {
-  font-family: 'Noto Sans KR', sans-serif;
+  font-family: '맑은 고딕', sans-serif;
   height: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden;
+  overflow: auto;
 }
 
 h4 {
   margin-top: 0;
   font-weight: bold;
 }
+
+/* 1) nav-tabs 자체의 밑줄 제거 */
+.modern-tabs .nav-tabs {
+  border-bottom: none !important;
+}
+
+/* 2) 각 탭 버튼 스타일 (기존에 쓰시던 대로) */
+.modern-tabs .nav-tabs .nav-link {
+    border: none !important;
+    border-radius: 20px !important;
+    margin-right: 8px !important;
+    background-color: #f8f9fa !important;
+    color: #6c757d !important;
+    font-weight: 500 !important;
+    padding: 8px 16px !important;
+}
+
+
+.modern-tabs .nav-tabs .nav-link.active {
+    background-color: #007bff !important;
+    color: white !important;
+    box-shadow: 0 2px 8px rgba(0,123,255,0.3) !important;
+    /* 필요하다면 여기도 border:none 지정 가능 */
+    border: none !important;
+}
+
+.modern-tabs .nav-tabs {
+  margin-bottom: 40px !important;
+}
+
+
 """
+
+# # ====== [12] UI 구성 ======
+# app_ui = ui.page_fluid(
+#     ui.tags.style(custom_css),
+    
+#     # 헤더
+#     ui.div(
+#         ui.div(
+#             # 좌측: 로고 + 제목
+#             ui.div(
+#                 tags.img(src="logo.png", height="28px", style="margin-right: 10px;"),
+#                 ui.h3("영천시에서 함께살개냥", style="margin: 0; font-size: 18px; color: white;"),
+#                 style="display: flex; align-items: center;"
+#             ),
+#             # 우측: 탭 버튼
+#             ui.div(
+#                 ui.HTML("""
+#                     <div class="tab-container">
+#                         <button class="tab-button active" id="tab-gyeongbuk"
+#                                 onclick="setActiveTab('경상북도')">경상북도</button>
+#                         <button class="tab-button" id="tab-yeongcheon"
+#                                 onclick="setActiveTab('영천시')">영천시</button>
+#                     </div>
+#                 """),
+#                 ui.tags.script("""
+#                     function setActiveTab(tabName) {
+#                         Shiny.setInputValue('top_tab', tabName);
+#                         document.querySelectorAll('.tab-button').forEach(btn => {
+#                             btn.classList.remove('active');
+#                         });
+#                         if (tabName === '경상북도') {
+#                             document.getElementById('tab-gyeongbuk').classList.add('active');
+#                         } else {
+#                             document.getElementById('tab-yeongcheon').classList.add('active');
+#                         }
+#                     }
+                    
+#                     // 초기화 및 엔터키/체크박스 토글 기능
+#                     document.addEventListener("DOMContentLoaded", function() {
+#                         // 기본값을 경상북도로 설정
+#                         setTimeout(function() {
+#                             setActiveTab('경상북도');
+#                         }, 100);
+                        
+#                         // 경상북도 관련 변수들
+#                         let isFirstTimeGyeongbuk = true;
+#                         let isFirstDetailsTime = true;
+                        
+#                         // 체크박스 변경 시뮬레이션 함수 (경상북도용)
+#                         function simulateCheckboxChangeGyeongbuk() {
+#                             const firstChecked = document.querySelector("input[type='checkbox'][name='gyeongbuk_selected_areas']:checked");
+#                             if (firstChecked) {
+#                                 firstChecked.click(); // 해제
+#                                 setTimeout(function() {
+#                                     firstChecked.click(); // 다시 체크
+#                                     setTimeout(function() {
+#                                         const applyBtn = document.getElementById('gyeongbuk_apply_selection');
+#                                         if (applyBtn) applyBtn.click(); // 분석 버튼 클릭
+#                                     }, 100);
+#                                 }, 100);
+#                             }
+#                         }
+                        
+#                         // 경상북도 분석 버튼 클릭 이벤트 (조건부 렌더링으로 변경)
+#                         document.addEventListener('click', function(event) {
+#                             if (event.target && event.target.id === 'gyeongbuk_apply_selection') {
+#                                 const checkedBoxes = document.querySelectorAll("input[type='checkbox'][name='gyeongbuk_selected_areas']:checked");
+#                                 if (checkedBoxes.length > 0) {
+#                                     // 최초 메인 창이 열릴 때만 체크박스 변경 시뮬레이션
+#                                     if (isFirstTimeGyeongbuk) {
+#                                         isFirstTimeGyeongbuk = false;
+#                                         setTimeout(function() {
+#                                             simulateCheckboxChangeGyeongbuk();
+#                                         }, 700);
+#                                     }
+#                                 } else {
+#                                     alert('분석할 지역을 먼저 선택해주세요.');
+#                                 }
+#                             }
+                            
+#                             // 지표 상세 버튼 클릭 처리
+#                             if (event.target && event.target.textContent === '자세히 보기') {
+#                                 const container = document.getElementById('gyeongbuk-details-container');
+#                                 if (container && isFirstDetailsTime) {
+#                                     isFirstDetailsTime = false;
+#                                     setTimeout(function() {
+#                                         simulateCheckboxChangeGyeongbuk();
+#                                     }, 500);
+#                                 }
+#                             }
+#                         });
+                        
+#                         // 엔터키 이벤트 (전체)
+#                         document.addEventListener('keydown', function(event) {
+#                             if (event.key === 'Enter' || event.keyCode === 13) {
+#                                 const currentTab = document.querySelector('.tab-button.active');
+#                                 if (currentTab && currentTab.id === 'tab-gyeongbuk') {
+#                                     // 경상북도 탭에서 엔터키
+#                                     const sidebar = document.getElementById('gyeongbuk-sidebar');
+#                                     if (sidebar && sidebar.classList.contains('open')) {
+#                                         const checkedBoxes = document.querySelectorAll("input[type='checkbox'][name='gyeongbuk_selected_areas']:checked");
+#                                         if (checkedBoxes.length > 0) {
+#                                             const applyBtn = document.getElementById('gyeongbuk_apply_selection');
+#                                             if (applyBtn) applyBtn.click();
+#                                         }
+#                                     }
+#                                 } else if (currentTab && currentTab.id === 'tab-yeongcheon') {
+#                                     // 영천시 탭에서 엔터키
+#                                     const sidebar = document.getElementById('yeongcheon-sidebar');
+#                                     const activeElement = document.activeElement;
+#                                     if (sidebar && (sidebar.contains(activeElement) || activeElement.tagName === 'INPUT' || activeElement.tagName === 'SELECT')) {
+#                                         // 숫자 입력 필드의 경우 blur 이벤트를 강제로 발생시켜 값 업데이트
+#                                         if (activeElement.tagName === 'INPUT' && activeElement.type === 'number') {
+#                                             activeElement.blur();
+#                                             activeElement.focus();
+#                                         }
+                                        
+#                                         // 약간의 지연 후 Shiny 신호 전송
+#                                         setTimeout(function() {
+#                                             Shiny.setInputValue('yeongcheon_enter_key_pressed', Math.random(), {priority: 'event'});
+#                                         }, 50);
+                                        
+#                                         event.preventDefault();
+#                                     }
+#                                 }
+#                             }
+#                         });
+#                     });
+#                 """),
+#                 style="margin-left: auto;"
+#             ),
+#             id="header"
+#         ),
+#         style="""
+#             position: fixed;
+#             top: 0;
+#             left: 0;
+#             width: 100%;
+#             height: 60px;
+#             z-index: 9999;
+#         """
+#     ),
+#     ui.output_ui("main_content", style="padding-top: 60px;"),
+    
+# )
+
+
 
 # ====== [12] UI 구성 ======
 app_ui = ui.page_fluid(
@@ -1412,10 +1709,10 @@ app_ui = ui.page_fluid(
             # 좌측: 로고 + 제목
             ui.div(
                 tags.img(src="logo.png", height="28px", style="margin-right: 10px;"),
-                ui.h3("영천시 반려동물 산책로 분석 대시보드", style="margin: 0; font-size: 18px; color: white;"),
+                ui.h3("영천에서 함께살개냥", style="margin: 0; font-size: 18px; color: white;"),
                 style="display: flex; align-items: center;"
             ),
-            # 우측: 탭 버튼
+            # 우측: 탭 버튼 (부록 탭 추가)
             ui.div(
                 ui.HTML("""
                     <div class="tab-container">
@@ -1423,6 +1720,8 @@ app_ui = ui.page_fluid(
                                 onclick="setActiveTab('경상북도')">경상북도</button>
                         <button class="tab-button" id="tab-yeongcheon"
                                 onclick="setActiveTab('영천시')">영천시</button>
+                        <button class="tab-button" id="tab-appendix"
+                                onclick="setActiveTab('부록')">부록</button>
                     </div>
                 """),
                 ui.tags.script("""
@@ -1433,8 +1732,10 @@ app_ui = ui.page_fluid(
                         });
                         if (tabName === '경상북도') {
                             document.getElementById('tab-gyeongbuk').classList.add('active');
-                        } else {
+                        } else if (tabName === '영천시') {
                             document.getElementById('tab-yeongcheon').classList.add('active');
+                        } else if (tabName === '부록') {
+                            document.getElementById('tab-appendix').classList.add('active');
                         }
                     }
                     
@@ -1547,6 +1848,7 @@ app_ui = ui.page_fluid(
     
 )
 
+
 # ====== [13] 서버 함수 ======
 def server(input, output, session):
     # 메모리 사용량 로깅
@@ -1580,7 +1882,7 @@ def server(input, output, session):
         print(f"선택된 탭: {input.top_tab()}")
         log_memory_usage(f"탭 변경: {input.top_tab()}")
 
-    # 경상북도 UI
+    # 메인 콘텐츠 UI
     @output()
     @render.ui
     def main_content():
@@ -1590,31 +1892,40 @@ def server(input, output, session):
             return ui.div(
                 ui.tags.div({"class":"welcome-background"}),
                 ui.div({"class":"welcome-container"},
-                    ui.h1("함께살개냥 : 영천시 반려동물 친화 환경 분석",
+                    ui.h1("영천시 반려동물 친화 환경 분석",
                           {"class":"welcome-title"}),
-                    ui.p("영천을 반려동물친화도시로 만들기 위한 개선안 제안",
+                    ui.p("저수지 데이터 기반 반려동물 친화 환경 개선안 제안",
                           {"class":"welcome-subtitle"}),
                     ui.input_action_button("start_app", "시작하기",
                                            class_="start-button")
                 )
             )
         
-         # 2) 시작 후: 두 개의 탭을 분기
+        # 2) 시작 후: 세 개의 탭을 분기
         if input.top_tab() == "경상북도":
-            # 원래의 gyeongbuk_ui() 내용 그대로 복사
-            return ui.TagList(
-                # 지도
-                ui.output_ui(
-                    "gyeongbuk_map",
-                    style="""
-                        position: fixed;
-                        top: 60px;
-                        left: 0;
-                        width: 100vw;
-                        height: calc(100vh - 60px);
-                        z-index: -1;
-                    """
-                ),
+            return gyeongbuk_ui()
+        elif input.top_tab() == "영천시":
+            return yeongcheon_ui()
+        elif input.top_tab() == "부록":
+            return appendix_ui()
+        else:
+            return ui.div("잘못된 탭 선택")
+
+    # 경상북도 UI 함수
+    def gyeongbuk_ui():
+        return ui.TagList(
+            # 지도
+            ui.output_ui(
+                "gyeongbuk_map",
+                style="""
+                    position: fixed;
+                    top: 60px;
+                    left: 0;
+                    width: 100vw;
+                    height: calc(100vh - 60px);
+                    z-index: -1;
+                """
+            ),
 
                 # 사이드바 토글 버튼
                 ui.tags.button(
@@ -1622,14 +1933,14 @@ def server(input, output, session):
                     id="gyeongbuk-toggle-button",
                     onclick="""
                         const sidebar = document.getElementById('gyeongbuk-sidebar');
-                        const btn = document.getElementById('gyeongbuk-toggle-button');
-                        const isClosed = sidebar.style.transform === 'translateX(-280px)';
-                        sidebar.style.transform = isClosed ? 'translateX(0)' : 'translateX(-280px)';
-                        sidebar.classList.toggle('open', !isClosed);
+                        const btn     = document.getElementById('gyeongbuk-toggle-button');
+                        const isClosed = sidebar.style.transform === 'translateX(-260px)';
+                        sidebar.style.transform = isClosed
+                            ? 'translateX(0)'
+                            : 'translateX(-260px)';
                         btn.innerText = isClosed ? '〈' : '〉';
-                        btn.style.left = isClosed ? '300px' : '20px';
-                    """
-                ),
+                        btn.style.left = isClosed ? '260px' : '16px';
+                    """),
 
                 # 사이드바
                 ui.div(
@@ -1685,7 +1996,7 @@ def server(input, output, session):
                     ),
                     
                     ui.input_action_button("gyeongbuk_apply_selection", "선택 지역 분석하기", 
-                                        style="width: 92%; margin-top: 10px; padding: 10px; background-color: #4caf50; color: white; border: none; border-radius: 5px; font-weight: bold;"),
+                                        style="width: 92%; margin-top: 10px; padding: 10px;  background-color: #1e3a8a;  color: white; border: none; border-radius: 5px; font-weight: bold;"),
                     id="gyeongbuk-sidebar",
                     class_="open"
                 ),
@@ -1695,33 +2006,34 @@ def server(input, output, session):
                 ui.output_ui("gyeongbuk_details")
             )
         
-        else:
-        # ── 영천 UI ──
-            return ui.TagList(
-                # 지도
-                ui.output_ui(
-                    "yeongcheon_map",
-                    style="""
-                        position: fixed;
-                        top: 60px;
-                        left: 0;
-                        width: 100vw;
-                        height: calc(100vh - 60px);
-                        z-index: -1;
-                    """
-                ),
-
+    # 영천시 UI 함수
+    def yeongcheon_ui():
+        return ui.TagList(
+            # 지도
+            ui.output_ui(
+                "yeongcheon_map",
+                style="""
+                    position: fixed;
+                    top: 60px;
+                    left: 0;
+                    width: 100vw;
+                    height: calc(100vh - 60px);
+                    z-index: -1;
+                """
+            ),
                 # 사이드바 토글 버튼
                 ui.tags.button(
                     "〈",
                     id="yeongcheon-toggle-button",
                     onclick="""
                         const sidebar = document.getElementById('yeongcheon-sidebar');
-                        const btn = document.getElementById('yeongcheon-toggle-button');
-                        const isClosed = sidebar.style.transform === 'translateX(-280px)';
-                        sidebar.style.transform = isClosed ? 'translateX(0)' : 'translateX(-280px)';
+                        const btn     = document.getElementById('yeongcheon-toggle-button');
+                        const isClosed = sidebar.style.transform === 'translateX(-260px)';
+                        sidebar.style.transform = isClosed
+                            ? 'translateX(0)'
+                            : 'translateX(-260px)';
                         btn.innerText = isClosed ? '〈' : '〉';
-                        btn.style.left = isClosed ? '300px' : '20px';
+                        btn.style.left = isClosed ? '260px' : '16px';
                     """
                 ),
 
@@ -1740,7 +2052,18 @@ def server(input, output, session):
                         ui.input_slider("yeongcheon_weight_perimeter", "둘레 가중치", min=0, max=1, value=0.3, step=0.05),
                         ui.input_slider("yeongcheon_weight_distance", "거리 가중치", min=0, max=1, value=0.2, step=0.05),
                         ui.input_slider("yeongcheon_weight_facilities", "시설수 가중치", min=0, max=1, value=0.2, step=0.05),
-                        ui.input_action_button("yeongcheon_apply_filters", "입력", class_="btn btn-primary"),
+                        ui.input_action_button("yeongcheon_apply_filters", "입력",
+                        style=(
+                            "width: 92%; "
+                            "margin-top: 10px; "
+                            "padding: 10px; "
+                            "background-color: #1e3a8a; "
+                            "color: white; "
+                            "border: none; "
+                            "border-radius: 5px; "
+                            "font-weight: bold;"
+                        )
+                        ),
                         class_="sidebar-section"
                     ),
                     id="yeongcheon-sidebar"
@@ -1776,6 +2099,193 @@ def server(input, output, session):
                     """
                 )
         )
+
+
+
+
+
+
+
+
+    # 부록 UI 함수
+    def appendix_ui():
+        return ui.div(
+            ui.div(
+                # 제목 섹션 (카드 형태 없이)
+                ui.div(
+                    ui.h1("부록 : 분석 방법론 및 지표 산출 가이드", 
+                        style="text-align: center; color: #1e3a8a; margin-bottom: 40px; padding: 30px 0; border-bottom: 3px solid #1e3a8a;"),
+                ),
+
+                # 경상북도 분석 섹션
+                ui.div(
+                    ui.h2("경상북도 반려동물 친화도 종합 분석"),
+                    
+                    ui.h3("1. 레이더 차트 구성 요소"),
+                    ui.p("경상북도의 반려동물 친화도를 5개 핵심 지표로 평가합니다:"),
+                    ui.tags.ul(
+                        ui.tags.li("산책 환경"),
+                        ui.tags.li("반려동물 시설"),
+                        ui.tags.li("교통 안전"),
+                        ui.tags.li("치안"),
+                        ui.tags.li("대기 환경")
+                    ),
+
+                    ui.h3("2. 각 지표별 산출 방법"),
+                    
+                    ui.h4("2.1 산책 환경"),
+                    ui.p("공원 면적이 넓을수록 좋은 산책 환경을 갖추었음을 의미합니다."),
+                    ui.div(
+                        "1인당 공원면적 = 총 공원면적(㎡) ÷ 총 인구수",
+                        class_="formula-box"
+                    ),
+                    ui.div(
+                        "레이더 차트 정규화 점수 = (해당 지역 1인당 공원면적) ÷ (최대 1인당 공원면적)",
+                        class_="formula-box"
+                    ),
+
+                    ui.h4("2.2 반려동물 시설"),
+                    ui.p("반려동물 관련 시설이 많을수록 편리한 반려동물 환경을 제공합니다."),
+                    ui.div(
+                        "1인당 시설수 = 총 반려동물 시설수 ÷ 총 인구수",
+                        class_="formula-box"
+                    ),
+                    ui.div(
+                        "레이더 차트 정규화 점수 = (해당 지역 1인당 시설수) ÷ (최대 1인당 시설수)",
+                        class_="formula-box"
+                    ),
+
+                    ui.h4("2.3 교통 안전"),
+                    ui.p("교통사고가 적을수록 산책 안전도가 높음을 의미합니다."),
+                    ui.div(
+                        "1인당 사고율 = 평균 교통사고 건수 ÷ 총 인구수",
+                        class_="formula-box"
+                    ),
+                    ui.div(
+                        "레이더 차트 정규화 점수 = 1 ÷ (1인당 사고율)",
+                        class_="formula-box"
+                    ),
+
+                    ui.h4("2.4 치안"),
+                    ui.p("범죄 발생률이 낮을수록 안전한 산책 환경을 제공합니다."),
+                    ui.div(
+                        "1인당 범죄율 = 총 범죄건수 ÷ 총 인구수",
+                        class_="formula-box"
+                    ),
+                    ui.div(
+                        "레이더 차트 정규화 점수 = 1 ÷ (1인당 범죄율)",
+                        class_="formula-box"
+                    ),
+
+                    ui.h4("2.5 대기 환경"),
+                    ui.p("PM2.5, PM10, O3, CO, NO2 농도를 종합하여 계산하고, 농도가 낮을수록 대기 환경이 좋음을 의미합니다."),
+                    ui.div(
+                        "종합 오염도 = PM2.5_정규화 + PM10_정규화 + O3_정규화 + CO_정규화 + NO2_정규화",
+                        class_="formula-box"
+                    ),
+                    ui.div(
+                        "레이더 차트 정규화 점수 = 1 ÷ (종합 오염도)",
+                        class_="formula-box"
+                    ),
+
+                    ui.div(
+                        ui.h4("중요 포인트"),
+                        ui.p("• 레이더 차트에서 모든 지표는 0~1 사이로 정규화되어 공정한 비교가 가능합니다."),
+                        ui.p("• 지표 상세 분석에서 산책 환경과 반려동물 시설은 높을수록 좋고, 교통 안전, 치안, 대기 환경은 낮을수록 좋습니다."),
+                        ui.p("• 여러 지역을 선택하여 상대적 비교가 가능합니다."),
+                        class_="highlight-box"
+                    ),
+
+                    class_="appendix-section"
+                ),
+
+                # 영천시 분석 섹션
+                ui.div(
+                    ui.h2("영천시 저수지 개발 적합도 분석"),
+                    
+                    ui.h3("1. 개발 적합도 점수 구성"),
+                    ui.p("반려동물 산책로로서의 저수지 개발 적합성을 4개 요소로 평가합니다:"),
+                    
+                    ui.div(
+                        ui.h4("면적 지표 (기본 가중치: 30%)"),
+                        ui.p("• 넓은 면적일수록 충분한 산책 공간 제공"),
+                        class_="method-step"
+                    ),
+
+                    ui.div(
+                        ui.h4("둘레 지표 (기본 가중치: 30%)"),
+                        ui.p("• 긴 둘레일수록 다양한 산책로 확보 가능"),
+                        class_="method-step"
+                    ),
+
+                    ui.div(
+                        ui.h4("접근성 지표 (기본 가중치: 20%)"),
+                        ui.p("• 인구 밀집 지역과의 거리가 가까울수록 접근성 우수"),
+                        ui.p("• 영천시 내 학교, 약국, 병원, 마트 위치 데이터를 수집하여 KMeans 군집분석을 통해 도출한 주요 중심지와의 최단거리 계산"),
+                        ui.p("• 거리가 가까울수록 높은 점수 (역산 적용)"),
+                        class_="method-step"
+                    ),
+
+                    ui.div(
+                        ui.h4("편의시설 지표 (기본 가중치: 20%)"),
+                        ui.p("• 반경 2km 내 반려동물 관련 시설 수"),
+                        ui.p("• 더 많은 편의시설이 있을수록 높은 점수"),
+                        ui.p("• Haversine 공식으로 정확한 거리 계산"),
+                        class_="method-step"
+                    ),
+
+                    ui.h3("2. 개발 적합도 점수 계산 공식"),
+                    ui.div(
+                        "개발 적합도점수 = (w₁ × 면적_정규화) + (w₂ × 둘레_정규화) + (w₃ × 거리_정규화) + (w₄ × 시설수_정규화)",
+                        class_="formula-box"
+                    ),
+                    ui.p("여기서 w₁ + w₂ + w₃ + w₄ = 1 (가중치 합계 = 100%)"),
+
+                    ui.h3("3. 정규화 방법 (Min-Max 정규화)"),
+                    ui.div(
+                        "정규화 점수 = (값 - 최솟값) ÷ (최댓값 - 최솟값)",
+                        class_="formula-box"
+                    ),
+                    ui.p("• 결과: 0~1 사이의 값으로 표준화"),
+                    ui.p("• 거리 지표는 1 - 정규화값으로 계산 (가까울수록 높은 점수)"),
+
+                    ui.h3("4. 거리 계산 (Haversine 공식)"),
+                    ui.p("지구의 곡률을 고려한 정확한 거리 계산을 위해 Haversine 공식을 사용합니다:"),
+                    ui.div(
+                        "a = sin²(Δφ/2) + cos φ₁ × cos φ₂ × sin²(Δλ/2)",
+                        ui.br(),
+                        "c = 2 × atan2(√a, √(1−a))",
+                        ui.br(),
+                        "d = R × c",
+                        ui.br(),
+                        "여기서 R = 6,371km (지구 반지름), φ = 위도, λ = 경도",
+                        class_="formula-box"
+                    ),
+
+                    ui.h3("5. 사용자 맞춤 설정"),
+                    ui.div(
+                        ui.h4("가중치 조정"),
+                        ui.p("• 사용자가 직접 각 지표의 가중치를 0~1 사이에서 조정 가능"),
+                        ui.p("• 시스템이 자동으로 전체 가중치를 100%로 정규화"),
+                        ui.p("• 실시간으로 개발 적합도 순위가 업데이트됨"),
+                        class_="highlight-box"
+                    ),
+
+                    ui.div(
+                        ui.h4("필터링 옵션"),
+                        ui.p("• 특정 읍면동으로 분석 범위 제한 가능"),
+                        ui.p("• 상위 N개 저수지만 선별하여 분석"),
+                        ui.p("• 가중치 변경 시 즉시 결과 반영"),
+                        class_="highlight-box"
+                    ),
+
+                    class_="appendix-section"
+                ),
+
+                id="appendix-content"
+            )
+        )
+
 
     # ===== 경상북도 관련 서버 함수들 =====
     selected_regions_for_analysis = reactive.Value([])
@@ -1864,14 +2374,14 @@ def server(input, output, session):
                         } else {
                             container.style.display = 'none';
                             btn.innerText = '자세히 보기';
-                            btn.style.backgroundColor = '#2196F3';
+                            btn.style.backgroundColor = '#1e3a8a';
                         }
                     """,
                     style="""
                         margin-left: 10px;
                         padding: 4px 8px;
                         width: 70px;
-                        background-color: #2196F3;
+                        background-color: #1e3a8a;
                         color: white;
                         border: none;
                         border-radius: 4px;
@@ -1890,7 +2400,7 @@ def server(input, output, session):
             id="gyeongbuk-popup-container",
             style="""
                 position: fixed; 
-                top: 100px; 
+                top: 80px; 
                 right: 20px; 
                 width: 520px; 
                 height: 420px; 
@@ -2053,10 +2563,12 @@ def server(input, output, session):
                     ui.nav_panel("반려동물 시설", ui.HTML(facility_html)),
                     selected="대기 환경"
                 ),
-                style="transform: scale(0.85); transform-origin: top left; width: 118%; height: 118%;"
+                class_="modern-tabs",
+                style="margin-top: 10px; transform: scale(0.8); transform-origin: top left; width: 110%; height: 110%;"
+
             ),
             id="gyeongbuk-details-container",
-            style="position: fixed; top: 540px; right: 20px; width: 520px; height: 420px; overflow: hidden; background-color: white; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.3); z-index: 9998; border-radius: 12px; display: none;"
+            style="position: fixed; top: 520px; right: 20px; width: 520px; height: 420px; overflow: hidden; background-color: white; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.3); z-index: 9998; border-radius: 12px; display: none;"
         )
 
     # ===== 영천시 관련 서버 함수들 =====
@@ -2202,7 +2714,7 @@ def server(input, output, session):
         return ui.div(
             ui.tags.button("✕", class_="close-btn", onclick="Shiny.setInputValue('yeongcheon_close_list', Math.random());"),
             ui.div(
-                ui.h2(f"적합도 상위 {len(top_data)}개 저수지", style="font-size: 18px; margin-bottom: 15px;"),
+                ui.h2(f"개발 적합도 상위 {len(top_data)}개 저수지", style="font-size: 18px; margin-bottom: 15px;"),
                 *[ui.input_action_button(f"yeongcheon_btn_{i}", 
                                        label=f"{i+1}. {row['시설명']}", 
                                        style="margin-bottom: 5px; width: 100%;")
@@ -2278,21 +2790,19 @@ def server(input, output, session):
             ui.p(f"주소: {row['소재지지번주소']}"),
             ui.p(f"행정동: {row['행정동명']}"),
             ui.p(f"지도상 명칭: {row.get('지도상명칭', row.get('지도상 명칭', '정보 없음'))}"),
-            ui.p(f"면적: {row['면적']} m²"),
-            ui.p(f"둘레: {row['둘레']} m"),
-            ui.p(f"인구 밀집지역과의 거리: {round(row['중심거리_km'], 2)} km"),
-            ui.p(f"반려동물 동반 가능 시설 수 (2km 내): {row['반경2km_시설수']}개"),
-            ui.p(f"적합도 점수: {round(row['적합도점수'], 3)}")
+            ui.p(f"면적: {row['면적']:.2f} m²"),
+            ui.p(f"둘레: {row['둘레']:.2f} m"),
+            ui.p(f"인구 밀집지역과의 거리: {row['중심거리_km']:.2f} km"),
+            ui.p(f"개발 적합도 점수: {row['적합도점수']:.2f}")
         )
 
     # 세션 종료 시 메모리 정리
     @reactive.Effect
-    def cleanup_on_session_end():
-        def cleanup():
-            global _cached_data
+    def cleanup():
+        if '_cached_data' in locals() or '_cached_data' in globals():
             _cached_data.clear()
-            gc.collect()
-            log_memory_usage("세션 종료")
+        gc.collect()
+        log_memory_usage("세션 종료")
         
         session.on_ended(cleanup)
 
