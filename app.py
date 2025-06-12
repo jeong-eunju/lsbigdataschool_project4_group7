@@ -1359,7 +1359,7 @@ custom_css = """
   position: fixed;
   top: 60px;                            /* 헤더 바로 아래 */
   left: 0;
-  width: 260px;                         /* 너비를 260px로 줄임 */
+  width: 320px;                        
   height: calc(100vh - 60px);
   background: #fff;                     /* 깨끗한 흰색 배경 */
   border-right: 1px solid #e0e0e0;      /* 부드러운 테두리 */
@@ -1379,7 +1379,7 @@ custom_css = """
 #yeongcheon-toggle-button {
   position: fixed;
   top: calc(60px + 16px);              /* 헤더 높이 + 사이드바 패딩 */
-  left: 260px;                          /* 사이드바의 오른쪽 끝에 딱 붙여놓습니다 */
+  left: 320px;                          /* 사이드바의 오른쪽 끝에 딱 붙여놓습니다 */
   width: 32px;
   height: 32px;
   background-color: #1e88e5;            /* 포인트 블루 */
@@ -1407,7 +1407,7 @@ custom_css = """
 #yeongcheon-toggle-button {
   position: fixed;
   top: calc(60px + 16px);
-  left: 260px;
+  left: 320px;
   width: 40px;
   height: 60px;
   background-color: #ffffff;
@@ -1934,12 +1934,12 @@ def server(input, output, session):
                     onclick="""
                         const sidebar = document.getElementById('gyeongbuk-sidebar');
                         const btn     = document.getElementById('gyeongbuk-toggle-button');
-                        const isClosed = sidebar.style.transform === 'translateX(-260px)';
+                        const isClosed = sidebar.style.transform === 'translateX(-320px)';
                         sidebar.style.transform = isClosed
                             ? 'translateX(0)'
-                            : 'translateX(-260px)';
+                            : 'translateX(-320px)';
                         btn.innerText = isClosed ? '〈' : '〉';
-                        btn.style.left = isClosed ? '260px' : '16px';
+                        btn.style.left = isClosed ? '320px' : '16px';
                     """),
 
                 # 사이드바
@@ -2028,12 +2028,12 @@ def server(input, output, session):
                     onclick="""
                         const sidebar = document.getElementById('yeongcheon-sidebar');
                         const btn     = document.getElementById('yeongcheon-toggle-button');
-                        const isClosed = sidebar.style.transform === 'translateX(-260px)';
+                        const isClosed = sidebar.style.transform === 'translateX(-320px)';
                         sidebar.style.transform = isClosed
                             ? 'translateX(0)'
-                            : 'translateX(-260px)';
+                            : 'translateX(-320px)';
                         btn.innerText = isClosed ? '〈' : '〉';
-                        btn.style.left = isClosed ? '260px' : '16px';
+                        btn.style.left = isClosed ? '320px' : '16px';
                     """
                 ),
 
@@ -2721,7 +2721,7 @@ def server(input, output, session):
                   for i, row in top_data.iterrows()],
                 style="max-height: 350px; overflow-y: auto;"
             ),
-            style="position: fixed; top: 80px; left: 320px; z-index: 9998; background-color: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); width: 320px;"
+            style="position: fixed; top: 80px; left: 380px; z-index: 9998; background-color: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); width: 320px;"
         )
 
     @output
@@ -2738,7 +2738,7 @@ def server(input, output, session):
                 create_barplot(top_data),
                 style="margin-top: 25px;"
             ),
-            style="position: fixed; top: 480px; left: 320px; z-index: 9998; background-color: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); width: 320px;"
+            style="position: fixed; top: 480px; left: 380px; z-index: 9998; background-color: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); width: 320px;"
         )
 
     @reactive.Effect
